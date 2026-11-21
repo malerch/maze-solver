@@ -5,6 +5,8 @@ from cell import Cell
 from graphics import Window
 
 
+
+
 class Maze:
     def __init__(
         self,
@@ -36,6 +38,7 @@ class Maze:
                 self.__draw_cell(i, j)
         self.__break_entrance_and_exit()
         self.__break_walls_r(0, 0)
+        self.__reset_cells_visited()
 
     def __draw_cell(self, i: int, j: int):
         #time.sleep(0.05)
@@ -97,3 +100,56 @@ class Maze:
                 next_neighbor.has_top_wall = False
 
             self.__break_walls_r(visiting[0], visiting[1])
+
+    def __reset_cells_visited(self) -> None:
+        for row in self.__cells:
+            for cell in row:
+                if cell.visited:
+                    cell.visited = False
+
+    def solve(self) -> bool:
+        return self.__solve_r(0, 0)
+
+    # Return true if the current cell is an end cell OR it leads to the end cell
+    # False if the current cell is a loser cell
+    def __solve_r(self, i: int, j: int) -> bool:
+        self.__animate()
+        current: Cell = self.__cells[i][j]
+        current.visited = True;
+        if i == self.__num_rows - 1 and j == self.__num_cols - 1:
+            return True
+
+        to_visit: list[tuple[int, int]] = []
+        if (
+            i > 0 and not self.__cells[i - 1][j].visited
+            and not self.__cells[i - 1][j].has_bottom_wall
+            and not current.has_top_wall
+        ):
+            to_visit.append((i - 1, j))
+        if (i < self.__num_cols - 1 and not self.__cells[i + 1][j].visited
+            and not self.__cells[i + 1][j].has_top_wall
+            and not current.has_bottom_wall
+        ):
+            to_visit.append((i + 1, j))
+        if (
+            j > 0 and not self.__cells[i][j - 1].visited
+            and not self.__cells[i][j - 1].has_right_wall
+            and not current.has_left_wall
+        ):
+            to_visit.append((i, j - 1))
+        if (
+            j < self.__num_rows - 1 and not self.__cells[i][j + 1].visited
+            and not self.__cells[i][j + 1].has_left_wall
+            and not current.has_right_wall
+        ):
+            to_visit.append((i, j + 1))
+
+        for next_i, next_j in to_visit:
+            current.draw_move(self.__cells[next_i][next_j], undo=False)
+            time.sleep(0.025)
+            if self.__solve_r(next_i, next_j):
+                return True
+            current.draw_move(self.__cells[next_i][next_j], undo=True)
+            time.sleep(0.1)
+
+        return False

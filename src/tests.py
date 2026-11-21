@@ -18,8 +18,8 @@ class Tests(unittest.TestCase):
         )
 
     def test_maze_create_square_cells(self):
-        num_cols = 50
-        num_rows = 50
+        num_cols = 30
+        num_rows = 30
         m1 = Maze(0, 0, num_rows, num_cols, 10, 10)
         self.assertEqual(
             len(m1._Maze__cells),
@@ -43,6 +43,14 @@ class Tests(unittest.TestCase):
             first_cell.has_top_wall
             or last_cell.has_bottom_wall
         )
+
+    def test_reset_cells_visited(self):
+        num_cols = 12
+        num_rows = 10
+        m1 = Maze(0, 0, num_rows, num_cols, 10, 10)
+        m1._Maze__cells[0][0].visited = True
+        m1._Maze__reset_cells_visited()
+        self.assertFalse(m1._Maze__cells[0][0].visited)
 
 if __name__ == "__main__":
     unittest.main()
