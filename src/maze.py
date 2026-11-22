@@ -106,8 +106,38 @@ class Maze:
                 if cell.visited:
                     cell.visited = False
 
+    def __get_neighbors(self, i, j) -> list[tuple[int, int]]:
+        neighbors: list[tuple[int, int]] = []
+        current: Cell = self.__cells[i][j]
+        if (
+            i > 0 #and not self.__cells[i - 1][j].visited
+            and not self.__cells[i - 1][j].has_bottom_wall
+            and not current.has_top_wall
+        ):
+            neighbors.append((i - 1, j))
+        if (
+            i < self.__num_cols - 1 #and not self.__cells[i + 1][j].visited
+            and not self.__cells[i + 1][j].has_top_wall
+            and not current.has_bottom_wall
+        ):
+            neighbors.append((i + 1, j))
+        if (
+            j > 0 #and not self.__cells[i][j - 1].visited
+            and not self.__cells[i][j - 1].has_right_wall
+            and not current.has_left_wall
+        ):
+            neighbors.append((i, j - 1))
+        if (
+            j < self.__num_rows - 1 #and not self.__cells[i][j + 1].visited
+            and not self.__cells[i][j + 1].has_left_wall
+            and not current.has_right_wall
+        ):
+            neighbors.append((i, j + 1))
+
+        return neighbors
+
     def solve(self) -> bool:
-        return self.__a_star_solve_r(0, 0, 0)
+        return self.__BFS_solve_r(0, 0)
 
     # Return true if the current cell is an end cell OR it leads to the end cell
     # False if the current cell is a loser cell
@@ -121,78 +151,75 @@ class Maze:
             print("End reached!")
             return True
 
-        to_visit: list[tuple[int, int]] = []
-        if (
-            i > 0 and not self.__cells[i - 1][j].visited
-            and not self.__cells[i - 1][j].has_bottom_wall
-            and not current.has_top_wall
-        ):
-            to_visit.append((i - 1, j))
-        if (i < self.__num_cols - 1 and not self.__cells[i + 1][j].visited
-            and not self.__cells[i + 1][j].has_top_wall
-            and not current.has_bottom_wall
-        ):
-            to_visit.append((i + 1, j))
-        if (
-            j > 0 and not self.__cells[i][j - 1].visited
-            and not self.__cells[i][j - 1].has_right_wall
-            and not current.has_left_wall
-        ):
-            to_visit.append((i, j - 1))
-        if (
-            j < self.__num_rows - 1 and not self.__cells[i][j + 1].visited
-            and not self.__cells[i][j + 1].has_left_wall
-            and not current.has_right_wall
-        ):
-            to_visit.append((i, j + 1))
+        neighbors: list[tuple[int, int]] = self.__get_neighbors(i, j)
 
-        for next_i, next_j in to_visit:
+        for next_i, next_j in neighbors:
+            next: Cell = self.__cells[next_i][next_j]
+            if next.visited:
+                continue
             current.draw_move(self.__cells[next_i][next_j], undo=False)
-            time.sleep(0.025)
+            #time.sleep(0.025)
             if self.__DFS_solve_r(next_i, next_j):
                 return True
             else:
                 current.draw_move(self.__cells[next_i][next_j], undo=True)
-                time.sleep(0.1)
+                #time.sleep(0.1)
 
         return False
+
+    def __backtrack(self, current: tuple[int, int]) -> None:
+        i, j = current[0], current[1]
+
+        while len(self.__get_neighbors(i, j)) == 1:
+            current_cell = self.__cells[i][j]
+            prev_neighbor = self.__get_neighbors(i, j)[0]
+            prev_neighbor_cell = self.__cells[prev_neighbor[0]][prev_neighbor[1]]
+
+            current_cell.draw_move(prev_neighbor_cell, undo=True)
+            self.__animate()
+
+            i, j = prev_neighbor
 
     def __BFS_solve_r(self, i, j) -> bool:
         self.__animate()
 
         current: Cell = self.__cells[i][j]
-        current.visited = True;
+        to_visit = [(0, 0)]
+        predecessors: dict[Cell, Cell | None] = {current: None}
 
-        if i == (self.__num_cols - 1) and (j == self.__num_rows - 1):
-            print("End reached!")
-            return True
+        while to_visit:
+            i, j = to_visit.pop(0)
+            next = self.__cells[i][j]
+            draw_from = current
+            neighbors = self.__get_neighbors(i, j)
 
-        to_visit: list[tuple[int, int]] = []
-        if (
-            i > 0 and not self.__cells[i - 1][j].visited
-            and not self.__cells[i - 1][j].has_bottom_wall
-            and not current.has_top_wall
-        ):
-            to_visit.append((i - 1, j))
-        if (i < self.__num_cols - 1 and not self.__cells[i + 1][j].visited
-            and not self.__cells[i + 1][j].has_top_wall
-            and not current.has_bottom_wall
-        ):
-            to_visit.append((i + 1, j))
-        if (
-            j > 0 and not self.__cells[i][j - 1].visited
-            and not self.__cells[i][j - 1].has_right_wall
-            and not current.has_left_wall
-        ):
-            to_visit.append((i, j - 1))
-        if (
-            j < self.__num_rows - 1 and not self.__cells[i][j + 1].visited
-            and not self.__cells[i][j + 1].has_left_wall
-            and not current.has_right_wall
-        ):
-            to_visit.append((i, j + 1))
+            self.__cells[i][j].visited = True
+            if not list(filter(
+                lambda neighbor:
+                    not self.__cells[neighbor[0]][neighbor[1]].visited,
+                neighbors
+            )):
+                # Backtrack to last intersection
+                self.__backtrack((i, j))
 
-        for next_i, next_j in to_visit:
+
+            for neighbor in neighbors:
+                if (
+                    not self.__cells[neighbor[0]][neighbor[1]].visited
+                    and neighbor not in to_visit
+                ):
+                    to_visit.append(neighbor)
+                else:
+                    draw_from = self.__cells[neighbor[0]][neighbor[1]]
+                    draw_from.draw_move(next, undo=False)
+                    self.__animate()
+
+            current = next
+            if i == (self.__num_cols - 1) and (j == self.__num_rows - 1):
+                return True
+
+        return False
+        """for next_i, next_j in to_visit:
             current.draw_move(self.__cells[next_i][next_j], undo=False)
             time.sleep(0.025)
         for next_i, next_j in to_visit:
@@ -200,7 +227,7 @@ class Maze:
                 return True
             else:
                 current.draw_move(self.__cells[next_i][next_j], undo=True)
-                time.sleep(0.1)
+                time.sleep(0.1)"""
 
         return False
 
@@ -219,33 +246,12 @@ class Maze:
             print("End reached!")
             return True
 
-        if (
-            i > 0 and not self.__cells[i - 1][j].visited
-            and not self.__cells[i - 1][j].has_bottom_wall
-            and not current.has_top_wall
-        ):
-            cost = self.__cost((i - 1, j), cost_so_far)
-            queue.push(cost, (i - 1, j))
-        if (i < self.__num_cols - 1 and not self.__cells[i + 1][j].visited
-            and not self.__cells[i + 1][j].has_top_wall
-            and not current.has_bottom_wall
-        ):
-            cost = self.__cost((i + 1, j), cost_so_far)
-            queue.push(cost, (i + 1, j))
-        if (
-            j > 0 and not self.__cells[i][j - 1].visited
-            and not self.__cells[i][j - 1].has_right_wall
-            and not current.has_left_wall
-        ):
-            cost = self.__cost((i, j - 1), cost_so_far)
-            queue.push(cost, (i, j - 1))
-        if (
-            j < self.__num_rows - 1 and not self.__cells[i][j + 1].visited
-            and not self.__cells[i][j + 1].has_left_wall
-            and not current.has_right_wall
-        ):
-            cost = self.__cost((i, j + 1), cost_so_far)
-            queue.push(cost, (i, j + 1))
+        neighbors: list[tuple[int, int]] = self.__get_neighbors(i, j)
+
+        for neighbor in neighbors:
+            if not self.__cells[neighbor[0]][neighbor[1]].visited:
+                cost = self.__cost(neighbor, cost_so_far)
+                queue.push(cost, neighbor)
 
         while not queue.empty():
             next_cost = queue.priority(0)
@@ -253,12 +259,12 @@ class Maze:
             if next is None:
                 continue
             current.draw_move(self.__cells[next[0]][next[1]], undo=False)
-            time.sleep(0.025)
+            #time.sleep(0.025)
 
             if self.__a_star_solve_r(next[0], next[1], next_cost):
                 return True
             else:
                 current.draw_move(self.__cells[next[0]][next[1]], undo=True)
-                time.sleep(0.1)
+                #time.sleep(0.1)
 
         return False
