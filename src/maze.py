@@ -108,15 +108,64 @@ class Maze:
                     cell.visited = False
 
     def solve(self) -> bool:
-        return self.__solve_r(0, 0)
+        return self.__BFS_solve_r(0, 0)
 
     # Return true if the current cell is an end cell OR it leads to the end cell
     # False if the current cell is a loser cell
-    def __solve_r(self, i: int, j: int) -> bool:
+    def __DFS_solve_r(self, i: int, j: int) -> bool:
         self.__animate()
+
         current: Cell = self.__cells[i][j]
         current.visited = True;
-        if i == self.__num_rows - 1 and j == self.__num_cols - 1:
+
+        if i == (self.__num_cols - 1) and (j == self.__num_rows - 1):
+            print("End reached!")
+            return True
+
+        to_visit: list[tuple[int, int]] = []
+        if (
+            i > 0 and not self.__cells[i - 1][j].visited
+            and not self.__cells[i - 1][j].has_bottom_wall
+            and not current.has_top_wall
+        ):
+            to_visit.append((i - 1, j))
+        if (i < self.__num_cols - 1 and not self.__cells[i + 1][j].visited
+            and not self.__cells[i + 1][j].has_top_wall
+            and not current.has_bottom_wall
+        ):
+            to_visit.append((i + 1, j))
+        if (
+            j > 0 and not self.__cells[i][j - 1].visited
+            and not self.__cells[i][j - 1].has_right_wall
+            and not current.has_left_wall
+        ):
+            to_visit.append((i, j - 1))
+        if (
+            j < self.__num_rows - 1 and not self.__cells[i][j + 1].visited
+            and not self.__cells[i][j + 1].has_left_wall
+            and not current.has_right_wall
+        ):
+            to_visit.append((i, j + 1))
+
+        for next_i, next_j in to_visit:
+            current.draw_move(self.__cells[next_i][next_j], undo=False)
+            #time.sleep(0.025)
+            if self.__DFS_solve_r(next_i, next_j):
+                return True
+            else:
+                current.draw_move(self.__cells[next_i][next_j], undo=True)
+                #time.sleep(0.1)
+
+        return False
+
+    def __BFS_solve_r(self, i, j) -> bool:
+        self.__animate()
+
+        current: Cell = self.__cells[i][j]
+        current.visited = True;
+
+        if i == (self.__num_cols - 1) and (j == self.__num_rows - 1):
+            print("End reached!")
             return True
 
         to_visit: list[tuple[int, int]] = []
@@ -147,9 +196,14 @@ class Maze:
         for next_i, next_j in to_visit:
             current.draw_move(self.__cells[next_i][next_j], undo=False)
             time.sleep(0.025)
-            if self.__solve_r(next_i, next_j):
+        for next_i, next_j in to_visit:
+            if self.__BFS_solve_r(next_i, next_j):
                 return True
-            current.draw_move(self.__cells[next_i][next_j], undo=True)
-            time.sleep(0.1)
+            else:
+                current.draw_move(self.__cells[next_i][next_j], undo=True)
+                time.sleep(0.1)
 
+        return False
+
+    def __a_star_search_r(self, i, j) -> bool:
         return False
