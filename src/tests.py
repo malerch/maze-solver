@@ -1,6 +1,7 @@
 import unittest
 
 from maze import Maze
+from priority_queue import PriorityQueue
 
 
 class Tests(unittest.TestCase):
@@ -51,6 +52,13 @@ class Tests(unittest.TestCase):
         m1._Maze__cells[0][0].visited = True
         m1._Maze__reset_cells_visited()
         self.assertFalse(m1._Maze__cells[0][0].visited)
+
+    def test_priority_queue_priority(self):
+        queue = PriorityQueue()
+        queue.push(10, (1, 0))
+        queue.push(15, (2, 0))
+        queue.push(20, (2, 0))
+        self.assertEqual(queue.priority(0), 10)
 
 if __name__ == "__main__":
     unittest.main()

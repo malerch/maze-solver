@@ -3,8 +3,7 @@ import time
 
 from cell import Cell
 from graphics import Window
-
-
+from priority_queue import PriorityQueue
 
 
 class Maze:
@@ -108,7 +107,7 @@ class Maze:
                     cell.visited = False
 
     def solve(self) -> bool:
-        return self.__BFS_solve_r(0, 0)
+        return self.__a_star_solve_r(0, 0, 0)
 
     # Return true if the current cell is an end cell OR it leads to the end cell
     # False if the current cell is a loser cell
@@ -149,12 +148,12 @@ class Maze:
 
         for next_i, next_j in to_visit:
             current.draw_move(self.__cells[next_i][next_j], undo=False)
-            #time.sleep(0.025)
+            time.sleep(0.025)
             if self.__DFS_solve_r(next_i, next_j):
                 return True
             else:
                 current.draw_move(self.__cells[next_i][next_j], undo=True)
-                #time.sleep(0.1)
+                time.sleep(0.1)
 
         return False
 
@@ -205,5 +204,61 @@ class Maze:
 
         return False
 
-    def __a_star_search_r(self, i, j) -> bool:
+    def __cost(self, next: tuple[int, int], cost_so_far: int) -> int:
+        return (cost_so_far + 1 + abs(next[0] - self.__num_cols - 1)
+            + abs(next[-1] - self.__num_rows - 1))
+
+    def __a_star_solve_r(self, i, j, cost_so_far: int = 0) -> bool:
+        self.__animate()
+
+        current: Cell = self.__cells[i][j]
+        current.visited = True;
+        queue: PriorityQueue = PriorityQueue()
+
+        if i == (self.__num_cols - 1) and (j == self.__num_rows - 1):
+            print("End reached!")
+            return True
+
+        if (
+            i > 0 and not self.__cells[i - 1][j].visited
+            and not self.__cells[i - 1][j].has_bottom_wall
+            and not current.has_top_wall
+        ):
+            cost = self.__cost((i - 1, j), cost_so_far)
+            queue.push(cost, (i - 1, j))
+        if (i < self.__num_cols - 1 and not self.__cells[i + 1][j].visited
+            and not self.__cells[i + 1][j].has_top_wall
+            and not current.has_bottom_wall
+        ):
+            cost = self.__cost((i + 1, j), cost_so_far)
+            queue.push(cost, (i + 1, j))
+        if (
+            j > 0 and not self.__cells[i][j - 1].visited
+            and not self.__cells[i][j - 1].has_right_wall
+            and not current.has_left_wall
+        ):
+            cost = self.__cost((i, j - 1), cost_so_far)
+            queue.push(cost, (i, j - 1))
+        if (
+            j < self.__num_rows - 1 and not self.__cells[i][j + 1].visited
+            and not self.__cells[i][j + 1].has_left_wall
+            and not current.has_right_wall
+        ):
+            cost = self.__cost((i, j + 1), cost_so_far)
+            queue.push(cost, (i, j + 1))
+
+        while not queue.empty():
+            next_cost = queue.priority(0)
+            next: tuple[int, int] | None = queue.pop()
+            if next is None:
+                continue
+            current.draw_move(self.__cells[next[0]][next[1]], undo=False)
+            time.sleep(0.025)
+
+            if self.__a_star_solve_r(next[0], next[1], next_cost):
+                return True
+            else:
+                current.draw_move(self.__cells[next[0]][next[1]], undo=True)
+                time.sleep(0.1)
+
         return False
